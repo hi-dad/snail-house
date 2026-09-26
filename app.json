@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "snail-house",
+    "name": "Snail House",
     "slug": "snail-house",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {
@@ -20,6 +20,13 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-audio",
+      "expo-notifications",
+      "expo-asset"
+    ],
+    "backgroundColor": "#FBF4E8"
   }
 }
