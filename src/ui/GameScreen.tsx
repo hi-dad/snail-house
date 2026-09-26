@@ -17,6 +17,8 @@ import { ASPECT } from './geometry';
 import { C, FONT } from './theme';
 
 const TICK_MS = 250;
+const BOARD_SIDE_GUTTER = 4;
+const BOARD_GAP = 10;
 const COUNT_UP_MS = 900;
 
 interface Props {
@@ -105,30 +107,39 @@ export function GameScreen({ game, onGame, onNewRun, onResetAll }: Props) {
   }, [urgent, pulse]);
   const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + pulse.value * 0.06 }] }));
 
-  // Keep the whole house on screen: fit by width or height, whichever is tighter.
+  // Make the house as big as the screen allows (usually limited by width), then centre the
+  // header + house together so the spare height is split above and below.
   const onLayout = (e: LayoutChangeEvent) =>
     setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
-  const boardWidth = Math.floor(Math.min(area.w - 16, area.h * ASPECT));
+  const [headerH, setHeaderH] = useState(0);
+  const boardWidth = Math.floor(Math.min(area.w - BOARD_SIDE_GUTTER * 2, (area.h - headerH - BOARD_GAP) * ASPECT));
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }]}>
-      <Pressable onLongPress={() => setDebugOpen(true)} delayLongPress={1200} style={styles.header}>
-        <Animated.View style={[styles.pill, { backgroundColor: tone }, pulseStyle]}>
-          <Text style={styles.safeLabel}>Safe for</Text>
-          <Text style={styles.safeTime}>{formatSafety(shown)}</Text>
-        </Animated.View>
-        <View style={styles.stats}>
-          <Text style={styles.streak}>{formatStreak(survivedMs(game, now))}</Text>
-          <Text style={styles.dot}>·</Text>
-          <Animated.View style={[styles.tokens, bumpStyle]}>
-            <StrawberryArt size={22} />
-            <Text style={styles.streak}>{game.tokens - pendingPickups}</Text>
+      <View style={styles.content} onLayout={onLayout}>
+        <Pressable
+          onLongPress={() => setDebugOpen(true)}
+          delayLongPress={1200}
+          style={styles.header}
+          onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}
+        >
+          <Animated.View style={[styles.pill, { backgroundColor: tone }, pulseStyle]}>
+            <Text style={styles.safeLabel}>Safe for</Text>
+            <Text style={styles.safeTime}>{formatSafety(shown)}</Text>
           </Animated.View>
-        </View>
-      </Pressable>
+          <View style={styles.stats}>
+            <Text style={styles.streak}>{formatStreak(survivedMs(game, now))}</Text>
+            <Text style={styles.dot}>·</Text>
+            <Animated.View style={[styles.tokens, bumpStyle]}>
+              <StrawberryArt size={22} />
+              <Text style={styles.streak}>{game.tokens - pendingPickups}</Text>
+            </Animated.View>
+          </View>
+        </Pressable>
 
-      <View style={styles.boardArea} onLayout={onLayout}>
-        {boardWidth > 0 && <Board width={boardWidth} game={game} now={now} onMove={handleMove} />}
+        <View style={styles.boardArea}>
+          {boardWidth > 0 && headerH > 0 && <Board width={boardWidth} game={game} now={now} onMove={handleMove} />}
+        </View>
       </View>
 
       <DebugMenu
@@ -167,5 +178,6 @@ const styles = StyleSheet.create({
   streak: { fontFamily: FONT.bold, fontSize: 18, color: C.inkSoft },
   dot: { fontFamily: FONT.bold, fontSize: 18, color: C.inkSoft, opacity: 0.6 },
   tokens: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  boardArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  content: { flex: 1, justifyContent: 'center' },
+  boardArea: { alignItems: 'center', marginTop: BOARD_GAP },
 });

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { GestureResponderEvent, Pressable, StyleSheet, View } from 'react-native';
+import { AppState, GestureResponderEvent, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
-  Easing, ZoomIn, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming,
+  Easing, ReduceMotion, ZoomIn, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming,
 } from 'react-native-reanimated';
 import Svg, { Circle, Path, Polyline } from 'react-native-svg';
 
@@ -11,13 +11,19 @@ import { Tile, tileOf, xOf, yOf } from '../game/map';
 import { shortestPath } from '../game/pathfinding';
 import { GameState, movePlayer, snailHeading } from '../game/simulation';
 import { playBlocked } from '../sound';
-import { CharacterArt, SnailArt, StrawberryArt } from './characters';
+import { SnailArt, StrawberryArt } from './characters';
+import { CHARACTER_MOTION, PlayerCharacter } from './PlayerCharacter';
 import { U, VIEW, pxToTile, tileToPx } from './geometry';
 import { HouseMap } from './HouseMap';
 import { FONT, blobColor } from './theme';
 
 const STEP_MS = 1000 / PLAYER_TILES_PER_SECOND;
-const linear = { easing: Easing.linear };
+// Movement is how the game shows what's happening (where you walked, where the snail is),
+// so it always animates, even with the phone's Reduce Motion setting on. Purely ambient
+// motion (breathing, wiggling, bobbing) still respects that setting.
+const NEVER = ReduceMotion.Never;
+const always = { reduceMotion: NEVER };
+const linear = { easing: Easing.linear, ...always };
 
 interface Props {
   width: number;
@@ -41,10 +47,48 @@ export function Board({ width, game, now, onMove }: Props) {
   const sx = useSharedValue(xOf(game.snailTile));
   const sy = useSharedValue(yOf(game.snailTile));
   const walk = useRef<{ tiles: Tile[]; t0: number }>({ tiles: [game.playerTile], t0: 0 });
+  const wave = useSharedValue(0);
+  const cheer = useSharedValue(0);
+  const [excited, setExcited] = useState(false);
+  const float = useSharedValue(0);
+  const isGhost = game.characterId === 'ghostie';
 
   useEffect(() => {
     breathe.set(withRepeat(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.sin) }), -1, true));
-  }, [breathe]);
+    float.set(
+      withRepeat(
+        withTiming(1, { duration: 1700, easing: Easing.inOut(Easing.sin), reduceMotion: CHARACTER_MOTION }),
+        -1,
+        true,
+        undefined,
+        CHARACTER_MOTION,
+      ),
+    );
+  }, [breathe, float]);
+
+  // Say hello whenever the game comes on screen: two happy hops and a wave.
+  useEffect(() => {
+    const greet = () => {
+      const up = { duration: 170, easing: Easing.out(Easing.quad), ...always };
+      const down = { duration: 170, easing: Easing.in(Easing.quad), ...always };
+      hop.set(withSequence(NEVER, withTiming(1, up), withTiming(0, down), withTiming(1, up), withTiming(0, down)));
+      wave.set(
+        withSequence(
+          NEVER,
+          withTiming(0, { duration: 0, ...always }),
+          withDelay(250, withTiming(1, { duration: 1500, easing: Easing.linear, ...always }), NEVER),
+        ),
+      );
+    };
+    const first = setTimeout(greet, 500);
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') greet();
+    });
+    return () => {
+      clearTimeout(first);
+      sub.remove();
+    };
+  }, [hop, wave]);
 
   // A fresh run (or loading a save) teleports the player instead of walking.
   const lastRun = useRef(game.runStartTime);
@@ -77,17 +121,22 @@ export function Board({ width, game, now, onMove }: Props) {
       xs.push(withTiming(xOf(t), { duration: STEP_MS, ...linear }));
       ys.push(withTiming(yOf(t), { duration: STEP_MS, ...linear }));
     }
-    px.set(withSequence(...xs));
-    py.set(withSequence(...ys));
+    px.set(withSequence(NEVER, ...xs));
+    py.set(withSequence(NEVER, ...ys));
+    walk.current = { tiles, t0: Date.now() + from.remaining };
+    if (isGhost) return; // Ghostie floats along instead of hopping
     const hops = Math.max(1, path.length + (from.remaining > 0 ? 1 : 0));
     hop.set(withRepeat(
       withSequence(
-        withTiming(1, { duration: STEP_MS / 2, easing: Easing.out(Easing.quad) }),
-        withTiming(0, { duration: STEP_MS / 2, easing: Easing.in(Easing.quad) }),
+        NEVER,
+        withTiming(1, { duration: STEP_MS / 2, easing: Easing.out(Easing.quad), ...always }),
+        withTiming(0, { duration: STEP_MS / 2, easing: Easing.in(Easing.quad), ...always }),
       ),
       hops,
+      false,
+      undefined,
+      NEVER,
     ));
-    walk.current = { tiles, t0: Date.now() + from.remaining };
   }
 
   // pageX/pageY minus the board's own position works the same on iOS, Android and web.
@@ -106,10 +155,11 @@ export function Board({ width, game, now, onMove }: Props) {
       if (hit && target === game.playerTile) return;
       playBlocked();
       shake.set(withSequence(
-        withTiming(-6, { duration: 50 }),
-        withTiming(6, { duration: 70 }),
-        withTiming(-4, { duration: 70 }),
-        withTiming(0, { duration: 60 }),
+        NEVER,
+        withTiming(-6, { duration: 50, ...always }),
+        withTiming(6, { duration: 70, ...always }),
+        withTiming(-4, { duration: 70, ...always }),
+        withTiming(0, { duration: 60, ...always }),
       ));
       return;
     }
@@ -130,10 +180,25 @@ export function Board({ width, game, now, onMove }: Props) {
       const id = ++pickupSeq.current;
       setPickup({ tile: token, delay: pickupInMs, id });
       setTimeout(() => setPickup((p) => (p?.id === id ? null : p)), pickupInMs + 900);
+      setTimeout(celebrate, pickupInMs);
       onMove(result.state, pickupInMs);
     } else {
       onMove(result.state);
     }
+  }
+
+  /** Got a strawberry! A big jump, an excited face and a wave. */
+  function celebrate() {
+    cheer.set(
+      withSequence(
+        NEVER,
+        withTiming(1, { duration: 230, easing: Easing.out(Easing.quad), ...always }),
+        withTiming(0, { duration: 330, easing: Easing.in(Easing.quad), ...always }),
+      ),
+    );
+    wave.set(withSequence(NEVER, withTiming(0, { duration: 0, ...always }), withTiming(1, { duration: 900, easing: Easing.linear, ...always })));
+    setExcited(true);
+    setTimeout(() => setExcited(false), 1200);
   }
 
   // A collected strawberry stays visible until the character actually reaches it.
@@ -149,9 +214,17 @@ export function Board({ width, game, now, onMove }: Props) {
       zIndex: Math.round(py.value * 10) + 1,
       transform: [
         { translateX: (px.value * U - VIEW.x) * s + tilePx / 2 - size / 2 },
-        { translateY: (py.value * U - VIEW.y) * s + tilePx - size * 0.9 - hop.value * tilePx * 0.22 },
-        { scaleX: 1 - hop.value * 0.06 + breathe.value * 0.015 },
-        { scaleY: 1 + hop.value * 0.08 - breathe.value * 0.03 },
+        {
+          translateY:
+            (py.value * U - VIEW.y) * s +
+            tilePx -
+            size * 0.9 -
+            // Ghostie hovers and bobs gently; everyone else hops.
+            (isGhost ? (0.12 + float.value * 0.1 + hop.value * 0.12) * tilePx : hop.value * tilePx * 0.22) -
+            cheer.value * tilePx * 0.55, // strawberry celebration jump
+        },
+        { scaleX: 1 - (isGhost ? 0 : hop.value * 0.06 + cheer.value * 0.08) + breathe.value * 0.015 },
+        { scaleY: 1 + (isGhost ? 0 : hop.value * 0.08 + cheer.value * 0.12) - breathe.value * 0.03 },
       ],
     };
   });
@@ -245,7 +318,15 @@ export function Board({ width, game, now, onMove }: Props) {
         <SnailArt size={tilePx * 1.25} />
       </Animated.View>
       <Animated.View pointerEvents="none" style={[styles.sprite, playerStyle]}>
-        <CharacterArt kind={game.characterId} color={color} size={tilePx * 1.35} mood={game.alive ? 'happy' : 'hugged'} />
+        <PlayerCharacter
+          kind={game.characterId}
+          color={color}
+          size={tilePx * 1.35}
+          mood={!game.alive ? 'hugged' : excited ? 'excited' : 'happy'}
+          hop={hop}
+          wave={wave}
+          cheer={cheer}
+        />
       </Animated.View>
     </Animated.View>
   );
@@ -257,7 +338,9 @@ function Token({ tile, tilePx, width, pickupIn }: { tile: Tile; tilePx: number; 
   const pop = useSharedValue(0);
   useEffect(() => {
     bob.set(withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.sin) }), -1, true));
-    if (pickupIn !== undefined) pop.set(withDelay(pickupIn, withTiming(1, { duration: 650, easing: Easing.out(Easing.quad) })));
+    if (pickupIn !== undefined) {
+      pop.set(withDelay(pickupIn, withTiming(1, { duration: 650, easing: Easing.out(Easing.quad), ...always }), NEVER));
+    }
   }, [bob, pop, pickupIn]);
 
   const size = tilePx * 0.9;
@@ -278,8 +361,10 @@ function Token({ tile, tilePx, width, pickupIn }: { tile: Tile; tilePx: number; 
       pointerEvents="none"
       style={[styles.sprite, { width: size, height: size, zIndex: yOf(tile) * 10, left: x + (tilePx - size) / 2, top: y + tilePx - size * 0.95 }]}
     >
-      <Animated.View entering={pickupIn === undefined ? ZoomIn.springify() : undefined} style={style}>
-        <StrawberryArt size={size} />
+      <Animated.View entering={pickupIn === undefined ? ZoomIn.springify() : undefined}>
+        <Animated.View style={style}>
+          <StrawberryArt size={size} />
+        </Animated.View>
       </Animated.View>
       {pickupIn !== undefined && (
         <Animated.Text style={[styles.plus, { fontSize: tilePx * 0.55 }, plusStyle]}>+1</Animated.Text>

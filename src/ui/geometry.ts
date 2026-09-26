@@ -4,7 +4,7 @@ import { MAP_H, MAP_W, Tile, xOf, yOf } from '../game/map';
 export const U = 10;
 
 /** The house drawing's viewBox: tile area plus room for the outer wall and dollhouse front. */
-export const VIEW = { x: -7, y: -8, w: MAP_W * U + 14, h: MAP_H * U + 20 };
+export const VIEW = { x: -5, y: -5, w: MAP_W * U + 10, h: MAP_H * U + 19 };
 
 export const ASPECT = VIEW.w / VIEW.h;
 

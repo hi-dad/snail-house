@@ -3,7 +3,7 @@ import Svg, { Circle, Ellipse, G, Path } from 'react-native-svg';
 
 import { BlobColor, C } from './theme';
 
-export type Mood = 'happy' | 'sleepy' | 'hugged';
+export type Mood = 'happy' | 'sleepy' | 'hugged' | 'excited';
 
 export interface CharacterDef {
   id: string;
@@ -26,6 +26,11 @@ interface CharacterProps {
   color: BlobColor;
   size: number;
   mood?: Mood;
+  /**
+   * 'full' draws everything (menus, death screen). 'body' leaves out the face and the parts
+   * that animate on their own (tail, leaf, wings), so PlayerCharacter can layer them on top.
+   */
+  layer?: 'full' | 'body';
 }
 
 const line = { stroke: C.outline, strokeWidth: 2, strokeLinejoin: 'round' as const };
@@ -38,11 +43,22 @@ const roundBody = (top: number) =>
 const GHOST_BODY =
   'M6 21 C6 11 12 5 20 5 C28 5 34 11 34 21 L34 33 Q31.5 30.5 29 33 Q26.5 35.5 24 33 Q21.5 30.5 19 33 Q16.5 35.5 14 33 Q11.5 30.5 9 33 Q7.5 34.5 6 33 Z';
 
+const crownTop = (kind: string) => (kind === 'bunny' ? 11 : kind === 'kitty' || kind === 'sprout' ? 9 : 6);
+
+/** Pivot points (in the 40×40 box) that the moving parts rotate around. */
+export const PIVOTS = {
+  tail: { x: 31, y: 29 },
+  leaf: { x: 20, y: 9.5 },
+  wingLeft: { x: 8.5, y: 22 },
+  wingRight: { x: 31.5, y: 22 },
+  hand: { x: 31, y: 24 },
+};
+
 /** The player. Several original characters, each tinted by the chosen color. 40×40 box. */
-export function CharacterArt({ kind = 'blob', color, size, mood = 'happy' }: CharacterProps) {
+export function CharacterArt({ kind = 'blob', color, size, mood = 'happy', layer = 'full' }: CharacterProps) {
   const ghost = kind === 'ghostie';
-  const top = kind === 'bunny' ? 11 : kind === 'kitty' ? 9 : kind === 'sprout' ? 9 : 6;
-  const eyeY = kind === 'bunny' ? 22 : kind === 'kitty' || kind === 'sprout' ? 21 : 19.5;
+  const full = layer === 'full';
+  const top = crownTop(kind);
   return (
     <Svg width={size} height={size} viewBox="0 0 40 40">
       <Ellipse cx={20} cy={36.5} rx={ghost ? 9 : 12} ry={ghost ? 2 : 2.6} fill={C.shadow} />
@@ -62,12 +78,13 @@ export function CharacterArt({ kind = 'blob', color, size, mood = 'happy' }: Cha
           <Path d="M32.5 17 L31 3.5 L22 10 Z" fill={color.body} {...line} />
           <Path d="M10 12 L10.8 6.5 L14.6 9.4 Z" fill={BLUSH} opacity={0.6} />
           <Path d="M30 12 L29.2 6.5 L25.4 9.4 Z" fill={BLUSH} opacity={0.6} />
+          {full && <TailShape color={color} />}
         </G>
       )}
-      {kind === 'chick' && (
+      {kind === 'chick' && full && (
         <G>
-          <Ellipse cx={5.5} cy={23} rx={3.4} ry={2.2} fill={color.shade} {...line} strokeWidth={1.6} transform="rotate(-30 5.5 23)" />
-          <Ellipse cx={34.5} cy={23} rx={3.4} ry={2.2} fill={color.shade} {...line} strokeWidth={1.6} transform="rotate(30 34.5 23)" />
+          <WingShape color={color} side="left" />
+          <WingShape color={color} side="right" />
         </G>
       )}
 
@@ -87,27 +104,85 @@ export function CharacterArt({ kind = 'blob', color, size, mood = 'happy' }: Cha
       <Ellipse cx={13} cy={top + 6.5} rx={3.2} ry={2} fill="#fff" opacity={0.7} transform={`rotate(-30 13 ${top + 6.5})`} />
 
       {/* on top */}
-      {kind === 'sprout' && (
-        <G>
-          <Path d="M20 9.5 Q19.5 5.5 20.5 3" stroke="#6FAE7B" strokeWidth={1.8} strokeLinecap="round" fill="none" />
-          <Path d="M20.5 4 C17 0.5 12.5 1.5 12 4.5 C15 6.5 18.5 6 20.5 4 Z" fill="#9BD3A5" {...line} strokeWidth={1.4} />
-          <Path d="M20.5 4 C23.5 0 28 0.8 28.8 3.8 C26 6.2 22.5 6 20.5 4 Z" fill="#9BD3A5" {...line} strokeWidth={1.4} />
-        </G>
-      )}
+      {kind === 'sprout' && full && <LeafShape />}
       {kind === 'chick' && (
         <Path d="M18 6.5 Q18.5 2.5 20 5.8 Q21 1.5 22.3 6.3" stroke={C.outline} strokeWidth={1.5} strokeLinecap="round" fill="none" />
       )}
 
-      <Face mood={mood} eyeY={eyeY} mouth={kind === 'kitty' ? 'cat' : kind === 'chick' ? 'beak' : kind === 'ghostie' ? 'oh' : 'smile'} />
+      {full && <FaceShape kind={kind} mood={mood} />}
+    </Svg>
+  );
+}
+
+// --- Parts that animate on their own (each drawn in the same 40×40 box) -------------------
+
+function TailShape({ color }: { color: BlobColor }) {
+  const d = 'M30 29 Q38.5 29.5 38 21.5 Q37.6 16.5 35 16';
+  return (
+    <G fill="none" strokeLinecap="round">
+      <Path d={d} stroke={C.outline} strokeWidth={4.4} />
+      <Path d={d} stroke={color.body} strokeWidth={2.4} />
+    </G>
+  );
+}
+
+function LeafShape() {
+  return (
+    <G>
+      <Path d="M20 9.5 Q19.5 5.5 20.5 3" stroke="#6FAE7B" strokeWidth={1.8} strokeLinecap="round" fill="none" />
+      <Path d="M20.5 4 C17 0.5 12.5 1.5 12 4.5 C15 6.5 18.5 6 20.5 4 Z" fill="#9BD3A5" {...line} strokeWidth={1.4} />
+      <Path d="M20.5 4 C23.5 0 28 0.8 28.8 3.8 C26 6.2 22.5 6 20.5 4 Z" fill="#9BD3A5" {...line} strokeWidth={1.4} />
+    </G>
+  );
+}
+
+function WingShape({ color, side }: { color: BlobColor; side: 'left' | 'right' }) {
+  const cx = side === 'left' ? 5.5 : 34.5;
+  const angle = side === 'left' ? -30 : 30;
+  return (
+    <Ellipse cx={cx} cy={23} rx={3.4} ry={2.2} fill={color.shade} {...line} strokeWidth={1.6} transform={`rotate(${angle} ${cx} 23)`} />
+  );
+}
+
+function FaceShape({ kind, mood }: { kind: string; mood: Mood }) {
+  const eyeY = kind === 'bunny' ? 22 : kind === 'kitty' || kind === 'sprout' ? 21 : 19.5;
+  const mouth = kind === 'kitty' ? 'cat' : kind === 'chick' ? 'beak' : kind === 'ghostie' ? 'oh' : 'smile';
+  return (
+    <G>
+      <Face mood={mood} eyeY={eyeY} mouth={mouth} />
       {kind === 'kitty' && (
         <G stroke={C.outline} strokeWidth={0.8} strokeLinecap="round">
           <Path d="M5 23.5 L9.5 24.2 M5.5 26.5 L9.5 25.6" />
           <Path d="M35 23.5 L30.5 24.2 M34.5 26.5 L30.5 25.6" />
         </G>
       )}
-    </Svg>
+    </G>
   );
 }
+
+const box = (size: number, children: React.ReactNode) => (
+  <Svg width={size} height={size} viewBox="0 0 40 40">
+    {children}
+  </Svg>
+);
+
+export const CharacterFace = ({ kind = 'blob', mood = 'happy', size }: { kind?: string; mood?: Mood; size: number }) =>
+  box(size, <FaceShape kind={kind} mood={mood} />);
+export const KittyTail = ({ color, size }: { color: BlobColor; size: number }) => box(size, <TailShape color={color} />);
+export const SproutLeaf = ({ size }: { size: number }) => box(size, <LeafShape />);
+export const ChickWing = ({ color, size, side }: { color: BlobColor; size: number; side: 'left' | 'right' }) =>
+  box(size, <WingShape color={color} side={side} />);
+
+/** A stubby little arm for waving hello. */
+export const WaveHand = ({ color, size }: { color: BlobColor; size: number }) =>
+  box(
+    size,
+    <G>
+      <Path d="M31 24 Q34 21 35.5 17.5" stroke={C.outline} strokeWidth={4.2} strokeLinecap="round" fill="none" />
+      <Path d="M31 24 Q34 21 35.5 17.5" stroke={color.body} strokeWidth={2.2} strokeLinecap="round" fill="none" />
+      <Circle cx={36} cy={15.8} r={2.7} fill={color.body} stroke={C.outline} strokeWidth={1.6} />
+    </G>,
+  );
 
 function Face({ mood, eyeY, mouth }: { mood: Mood; eyeY: number; mouth: 'smile' | 'cat' | 'beak' | 'oh' }) {
   const m = eyeY + 4;
@@ -118,10 +193,10 @@ function Face({ mood, eyeY, mouth }: { mood: Mood; eyeY: number; mouth: 'smile' 
           <Path d={`M13 ${eyeY + 0.5} q2 1.6 4 0`} />
           <Path d={`M23 ${eyeY + 0.5} q2 1.6 4 0`} />
         </G>
-      ) : mood === 'hugged' ? (
-        <G stroke={C.outline} strokeWidth={1.6} strokeLinecap="round" fill="none">
-          <Path d={`M13 ${eyeY + 1} q2 -2.2 4 0`} />
-          <Path d={`M23 ${eyeY + 1} q2 -2.2 4 0`} />
+      ) : mood === 'hugged' || mood === 'excited' ? (
+        <G stroke={C.outline} strokeWidth={mood === 'excited' ? 1.9 : 1.6} strokeLinecap="round" fill="none">
+          <Path d={`M13 ${eyeY + 1} q2 -2.6 4 0`} />
+          <Path d={`M23 ${eyeY + 1} q2 -2.6 4 0`} />
         </G>
       ) : (
         <G fill={C.outline}>
@@ -131,14 +206,21 @@ function Face({ mood, eyeY, mouth }: { mood: Mood; eyeY: number; mouth: 'smile' 
           <Circle cx={25.5} cy={eyeY - 0.8} r={0.6} fill="#fff" />
         </G>
       )}
-      {mouth === 'smile' && <Path d={`M18 ${m} q2 1.8 4 0`} stroke={C.outline} strokeWidth={1.5} strokeLinecap="round" fill="none" />}
-      {mouth === 'cat' && (
+      {mood === 'excited' && mouth !== 'beak' ? (
+        // A big open "yay!" smile.
+        <G>
+          <Path d={`M17.4 ${m - 0.6} L22.6 ${m - 0.6} Q22.6 ${m + 3.4} 20 ${m + 3.4} Q17.4 ${m + 3.4} 17.4 ${m - 0.6} Z`} fill="#8C4B4B" stroke={C.outline} strokeWidth={1.2} strokeLinejoin="round" />
+          <Ellipse cx={20} cy={m + 2.3} rx={1.5} ry={0.9} fill="#F28B9B" />
+        </G>
+      ) : null}
+      {mood !== 'excited' && mouth === 'smile' && <Path d={`M18 ${m} q2 1.8 4 0`} stroke={C.outline} strokeWidth={1.5} strokeLinecap="round" fill="none" />}
+      {mood !== 'excited' && mouth === 'cat' && (
         <Path d={`M17.6 ${m - 0.4} q1.2 1.6 2.4 0 q1.2 1.6 2.4 0`} stroke={C.outline} strokeWidth={1.3} strokeLinecap="round" fill="none" />
       )}
       {mouth === 'beak' && <Path d={`M17.8 ${m - 1.2} L22.2 ${m - 1.2} L20 ${m + 1.2} Z`} fill="#F4A261" stroke={C.outline} strokeWidth={1.1} strokeLinejoin="round" />}
-      {mouth === 'oh' && <Ellipse cx={20} cy={m + 0.2} rx={1.3} ry={1.6} fill={C.outline} />}
-      <Ellipse cx={11.5} cy={m} rx={2.4} ry={1.4} fill={BLUSH} opacity={0.55} />
-      <Ellipse cx={28.5} cy={m} rx={2.4} ry={1.4} fill={BLUSH} opacity={0.55} />
+      {mood !== 'excited' && mouth === 'oh' && <Ellipse cx={20} cy={m + 0.2} rx={1.3} ry={1.6} fill={C.outline} />}
+      <Ellipse cx={11.5} cy={m} rx={2.4} ry={1.4} fill={BLUSH} opacity={mood === 'excited' ? 0.85 : 0.55} />
+      <Ellipse cx={28.5} cy={m} rx={2.4} ry={1.4} fill={BLUSH} opacity={mood === 'excited' ? 0.85 : 0.55} />
     </G>
   );
 }

@@ -21,7 +21,7 @@ const TILED_ROOMS: RoomId[] = ['bathroom', 'kitchen'];
 // Room names sit in the middle of each room on a soft name tag. Dining's table fills the
 // middle, so its name sits just below the table.
 const LABEL_DY: Partial<Record<RoomId, number>> = { dining: 0.43 };
-const LABEL_SIZE = 2.7;
+const LABEL_SIZE = 3.5;
 
 type Seg = { x1: number; y1: number; x2: number; y2: number };
 
@@ -473,11 +473,6 @@ function Decor() {
       <Plant x={4.5} y={88} s={1.1} />
       <Plant x={35.5} y={87.5} />
       <Fireplace />
-      {/* entry: coat hooks */}
-      {[66, 70, 74].map((x) => (
-        <Circle key={x} cx={x} cy={124.5} r={0.7} fill={C.outline} />
-      ))}
-      <Path d="M69.2 124.8 q0.8 3 2.6 3 q-0.4 -2.2 -1.8 -3 Z" fill="#9CC5E8" stroke={C.outline} strokeWidth={0.35} />
       {/* hallway: a plant and a picture on the wall */}
       <Plant x={76} y={44} />
       <Rect x={62} y={40.6} width={7} height={4.4} rx={0.6} fill="#FFF6E6" stroke={C.outline} strokeWidth={0.45} />
