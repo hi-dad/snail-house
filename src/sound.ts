@@ -8,7 +8,9 @@ const sources = {
 };
 
 type SoundName = keyof typeof sources;
-const players: Partial<Record<SoundName, AudioPlayer>> = {};
+const PLAYER_POOL_SIZE = 3;
+const playerPools: Partial<Record<SoundName, AudioPlayer[]>> = {};
+const nextPlayer: Partial<Record<SoundName, number>> = {};
 let soundEnabled = true;
 
 export function setSoundEnabled(enabled: boolean) {
@@ -18,7 +20,13 @@ export function setSoundEnabled(enabled: boolean) {
 function play(name: SoundName) {
   if (!soundEnabled) return;
   try {
-    const player = (players[name] ??= createAudioPlayer(sources[name]));
+    const pool = (playerPools[name] ??= []);
+    // Short effects can overlap when the player taps again quickly. Rotating through a
+    // small pool prevents iOS from dropping the new sound while the last one is active.
+    while (pool.length < PLAYER_POOL_SIZE) pool.push(createAudioPlayer(sources[name]));
+    const index = nextPlayer[name] ?? 0;
+    const player = pool[index];
+    nextPlayer[name] = (index + 1) % PLAYER_POOL_SIZE;
     player.seekTo(0);
     player.play();
   } catch {

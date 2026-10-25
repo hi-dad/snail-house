@@ -64,6 +64,9 @@ export function GameScreen({
   const bumpStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + bump.value * 0.35 }] }));
 
   function handleMove(next: GameState, pickupInMs?: number) {
+    // Every valid destination gets immediate feedback, regardless of whether it moves
+    // toward or away from the snail.
+    playMove();
     if (pickupInMs !== undefined) {
       setPendingPickups((n) => n + 1);
       setTimeout(() => {
@@ -79,7 +82,6 @@ export function GameScreen({
       setBoost({ amount: after - before, id: Date.now() });
       setBoostLeft(after - before);
     }
-    playMove();
     setNow(t);
     onGame(next, { moved: true });
   }
@@ -123,28 +125,31 @@ export function GameScreen({
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }]}>
-      <Pressable
-        accessibilityLabel="Open settings"
-        hitSlop={6}
-        onPress={() => setSettingsOpen(true)}
-        style={({ pressed }) => [styles.settingsButton, { top: insets.top + 4 }, pressed && styles.settingsPressed]}
-      >
-        <Image source={require('../../assets/ui/settings-shell-balanced.png')} resizeMode="contain" style={styles.settingsImage} />
-      </Pressable>
       <View style={styles.content} onLayout={onLayout}>
-        <View style={styles.header} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
-          <Animated.View style={[styles.pill, { backgroundColor: tone }, pulseStyle]}>
-            <Text style={styles.safeLabel}>Safe for</Text>
-            <Text style={styles.safeTime}>{formatSafety(shown)}</Text>
-          </Animated.View>
-          <View style={styles.stats}>
-            <Text style={styles.streak}>{formatStreak(survivedMs(game, now))}</Text>
-            <Text style={styles.dot}>·</Text>
-            <Animated.View style={[styles.tokens, bumpStyle]}>
-              <StrawberryArt size={22} />
-              <Text style={styles.streak}>{game.tokens - pendingPickups}</Text>
+        <View style={styles.topBar} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
+          <View style={styles.navSpacer} />
+          <View style={styles.header}>
+            <Animated.View style={[styles.pill, { backgroundColor: tone }, pulseStyle]}>
+              <Text style={styles.safeLabel}>Safe for</Text>
+              <Text style={styles.safeTime}>{formatSafety(shown)}</Text>
             </Animated.View>
+            <View style={styles.stats}>
+              <Text style={styles.streak}>{formatStreak(survivedMs(game, now))}</Text>
+              <Text style={styles.dot}>·</Text>
+              <Animated.View style={[styles.tokens, bumpStyle]}>
+                <StrawberryArt size={22} />
+                <Text style={styles.streak}>{game.tokens - pendingPickups}</Text>
+              </Animated.View>
+            </View>
           </View>
+          <Pressable
+            accessibilityLabel="Open settings"
+            hitSlop={6}
+            onPress={() => setSettingsOpen(true)}
+            style={({ pressed }) => [styles.settingsButton, pressed && styles.settingsPressed]}
+          >
+            <Image source={require('../../assets/ui/settings-shell-balanced.png')} resizeMode="contain" style={styles.settingsImage} />
+          </Pressable>
         </View>
 
         <View style={styles.boardArea}>
@@ -168,10 +173,15 @@ export function GameScreen({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
+  topBar: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingBottom: 6,
+  },
+  navSpacer: { width: 56, height: 56 },
   settingsButton: {
-    position: 'absolute',
-    right: 8,
-    zIndex: 10,
     width: 56,
     height: 56,
     alignItems: 'center',
@@ -179,7 +189,7 @@ const styles = StyleSheet.create({
   },
   settingsPressed: { transform: [{ scale: 0.9 }] },
   settingsImage: { width: 56, height: 56 },
-  header: { alignItems: 'center', paddingHorizontal: 16, paddingBottom: 6 },
+  header: { flex: 1, alignItems: 'center' },
   pill: {
     flexDirection: 'row',
     alignItems: 'baseline',

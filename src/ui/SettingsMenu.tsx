@@ -51,14 +51,12 @@ export function SettingsMenu({
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.card}>
           <View style={styles.heading}>
-            <View>
-              <Text style={styles.title}>Settings</Text>
-              <Text style={styles.tagline}>Game options</Text>
-            </View>
+            <Text style={styles.title}>Settings</Text>
             <Pressable accessibilityLabel="Close settings" onPress={onClose} style={styles.close}>
-              <Text style={styles.closeText}>×</Text>
+              <CloseIcon />
             </Pressable>
           </View>
+          <Text style={styles.tagline}>Game options</Text>
 
           <Animated.View style={[styles.preview, wiggleStyle]}>
             <View style={styles.previewCharacter}>
@@ -192,7 +190,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: C.wall,
   },
-  closeText: { fontFamily: FONT.heavy, fontSize: 28, lineHeight: 32, color: C.inkSoft },
   preview: { alignItems: 'center', marginTop: 6, marginBottom: 2 },
   previewCharacter: {
     width: 104,
@@ -287,6 +284,15 @@ const styles = StyleSheet.create({
   donePressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 0, height: 1 } },
   doneText: { fontFamily: FONT.heavy, fontSize: 17, color: '#FFFFFF' },
 });
+
+/** An SVG keeps the cross optically centered on iOS instead of relying on font metrics. */
+function CloseIcon() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 18 18">
+      <Path d="M3 3 L15 15 M15 3 L3 15" fill="none" stroke={C.inkSoft} strokeWidth={3.4} strokeLinecap="round" />
+    </Svg>
+  );
+}
 
 /** Original speaker mark with a clear red mute slash. */
 function SoundIcon({ muted }: { muted: boolean }) {
