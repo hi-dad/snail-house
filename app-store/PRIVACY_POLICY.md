@@ -31,4 +31,4 @@ If the app's data practices change, this policy will be updated before the affec
 For privacy questions, contact:
 
 Snail House Support  
-https://hi-dad.github.io/snail-house/support.html
+https://hi-dad.github.io/snail-house-support/support.html

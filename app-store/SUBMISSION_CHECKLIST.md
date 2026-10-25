@@ -2,14 +2,14 @@
 
 ## 1. Apple and Expo accounts
 
-- [ ] Join the paid Apple Developer Program.
-- [ ] Create or sign in to an Expo account for EAS Build.
+- [x] Join the paid Apple Developer Program.
+- [x] Create or sign in to an Expo account for EAS Build.
 - [ ] Confirm the legal seller/developer name that should appear on the store.
 
 ## 2. Permanent identifiers
 
-- [ ] Choose an iOS bundle identifier, for example `com.yourcompany.snailhouse`.
-- [ ] Add it as `expo.ios.bundleIdentifier` in `app.json`.
+- [x] Choose the iOS bundle identifier `com.danielryan.snailhouse`.
+- [x] Add it as `expo.ios.bundleIdentifier` in `app.json`.
 - [ ] Do not choose casually: it identifies the app in Apple systems and should remain stable.
 - [ ] Choose an internal App Store Connect SKU.
 
@@ -19,17 +19,17 @@
 - [x] Disable microphone, audio-recording, and background-audio capabilities; the game only plays short foreground sound effects.
 - [ ] Replace the placeholder splash image before the production build.
 - [ ] Add and configure `expo-splash-screen` if a custom launch screen is desired.
-- [ ] Set an iOS build number for the first build.
-- [ ] Create `eas.json` with a production build profile.
+- [x] Set an iOS build number for the first build.
+- [x] Create `eas.json` with a production build profile.
 - [ ] Build and test a standalone iPhone preview build; Expo Go is not the submitted app.
 - [ ] Verify local save restoration and the one-hour local notification on a physical iPhone.
-- [ ] Remove or ensure users cannot discover any debug-only controls.
+- [x] Remove or ensure users cannot discover any debug-only controls.
 
 ## 4. Public pages and contact information
 
-- [ ] Publish `PRIVACY_POLICY.md` at a public HTTPS URL.
-- [ ] Create a public support page with a working support email or other legally required contact details.
-- [ ] Add a privacy-policy link inside the app.
+- [x] Publish the privacy policy at `https://hi-dad.github.io/snail-house-support/privacy.html`.
+- [x] Publish the support page at `https://hi-dad.github.io/snail-house-support/support.html`.
+- [x] Add privacy-policy and support links inside the app.
 - [ ] Replace all bracketed placeholders in `APP_STORE_METADATA.md`.
 
 ## 5. App Store Connect record

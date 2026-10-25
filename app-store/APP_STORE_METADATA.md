@@ -44,13 +44,13 @@ How long can you stay one step ahead?
 cozy,snail,offline,casual,slow game,streak,relaxing,house,collection,survival
 
 **Support URL**  
-https://hi-dad.github.io/snail-house/support.html
+https://hi-dad.github.io/snail-house-support/support.html
 
 **Marketing URL (optional)**  
 [PUBLIC APP WEBSITE]
 
 **Privacy Policy URL**  
-https://hi-dad.github.io/snail-house/privacy.html
+https://hi-dad.github.io/snail-house-support/privacy.html
 
 **Copyright**  
 2026 [LEGAL OWNER OR COMPANY NAME]

@@ -6,8 +6,8 @@ import Svg, { Path } from 'react-native-svg';
 import { CHARACTERS, CharacterArt, characterDef } from './characters';
 import { BLOB_COLORS, C, FONT, blobColor } from './theme';
 
-const PRIVACY_URL = 'https://hi-dad.github.io/snail-house/privacy.html';
-const SUPPORT_URL = 'https://hi-dad.github.io/snail-house/support.html';
+const PRIVACY_URL = 'https://hi-dad.github.io/snail-house-support/privacy.html';
+const SUPPORT_URL = 'https://hi-dad.github.io/snail-house-support/support.html';
 
 function openPage(url: string) {
   Linking.openURL(url).catch(() => {});
