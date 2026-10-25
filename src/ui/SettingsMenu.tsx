@@ -131,6 +131,7 @@ export function SettingsMenu({
             <Pressable
               accessibilityLabel="Open privacy policy"
               accessibilityRole="link"
+              hitSlop={8}
               onPress={() => openPage(PRIVACY_URL)}
               style={({ pressed }) => [styles.linkButton, pressed && styles.linkPressed]}
             >
@@ -139,6 +140,7 @@ export function SettingsMenu({
             <Pressable
               accessibilityLabel="Open support page"
               accessibilityRole="link"
+              hitSlop={8}
               onPress={() => openPage(SUPPORT_URL)}
               style={({ pressed }) => [styles.linkButton, pressed && styles.linkPressed]}
             >
@@ -258,17 +260,15 @@ const styles = StyleSheet.create({
   },
   soundButtonMuted: { backgroundColor: '#F8E3E1' },
   soundPressed: { transform: [{ scale: 0.94 }] },
-  linkRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 12 },
+  linkRow: { flexDirection: 'row', justifyContent: 'center', gap: 14, marginTop: 8 },
   linkButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: C.wall,
-    backgroundColor: '#FFFDFC',
+    minHeight: 28,
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 3,
   },
-  linkPressed: { backgroundColor: C.paperDeep },
-  linkText: { fontFamily: FONT.bold, fontSize: 14, color: C.inkSoft },
+  linkPressed: { opacity: 0.45 },
+  linkText: { fontFamily: FONT.semibold, fontSize: 12, color: C.inkSoft, opacity: 0.72 },
   done: {
     alignSelf: 'center',
     marginTop: 14,
