@@ -176,7 +176,8 @@ const styles = StyleSheet.create({
   topBar: {
     width: '100%',
     flexDirection: 'row',
-    alignItems: 'center',
+    // Align the shell to the timer pill, not to the timer + streak block.
+    alignItems: 'flex-start',
     paddingHorizontal: 8,
     paddingBottom: 6,
   },
@@ -186,6 +187,7 @@ const styles = StyleSheet.create({
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 4,
   },
   settingsPressed: { transform: [{ scale: 0.9 }] },
   settingsImage: { width: 56, height: 56 },
