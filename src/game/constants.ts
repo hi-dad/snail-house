@@ -28,7 +28,5 @@ export const PLAYER_TILES_PER_SECOND = 8;
 
 // Notification thresholds (time before catch).
 export const WARNINGS = [
-  { beforeMs: 12 * HOUR_MS, body: 'The snail is getting closer… 🐌' },
-  { beforeMs: 3 * HOUR_MS, body: 'The snail is in the next room!' },
   { beforeMs: 1 * HOUR_MS, body: "It's RIGHT behind you." },
 ] as const;

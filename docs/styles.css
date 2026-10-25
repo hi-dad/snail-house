@@ -1,0 +1,76 @@
+:root {
+  color-scheme: light;
+  font-family: ui-rounded, "SF Pro Rounded", "Avenir Next", system-ui, sans-serif;
+  color: #604b3e;
+  background: #c9f5f2;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 32px 18px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 10% 8%, rgba(255,255,255,.9) 0 9%, transparent 9.5%),
+    radial-gradient(circle at 90% 90%, rgba(255,244,214,.8) 0 12%, transparent 12.5%),
+    #c9f5f2;
+}
+
+.card {
+  width: min(100%, 720px);
+  padding: clamp(26px, 6vw, 56px);
+  background: #fff9ef;
+  border: 3px solid #755747;
+  border-radius: 36px;
+  box-shadow: 0 10px 0 rgba(117, 87, 71, .18);
+}
+
+.home { text-align: center; }
+.shell {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 18px;
+  display: grid;
+  place-items: center;
+  border: 7px solid #8a2533;
+  border-radius: 48% 52% 50% 46%;
+  color: #8a2533;
+  background: #f7a79d;
+  font: 800 62px/1 Georgia, serif;
+  transform: rotate(-8deg);
+}
+
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 18px; font-size: clamp(2rem, 7vw, 3.7rem); line-height: 1; color: #543e32; }
+h2 { margin: 30px 0 8px; font-size: 1.25rem; color: #543e32; }
+p, li { font-size: 1rem; line-height: 1.65; }
+ul { padding-left: 1.3rem; }
+li + li { margin-top: 8px; }
+a { color: #8a2533; font-weight: 750; }
+
+.eyebrow { margin-bottom: 8px; text-transform: uppercase; letter-spacing: .16em; font-weight: 850; color: #a55f55; }
+.lede { font-size: 1.16rem; color: #776052; }
+.updated, .fineprint { color: #8d7769; font-size: .92rem; }
+.back { display: inline-block; margin-bottom: 28px; text-decoration: none; }
+
+nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 28px; }
+.button {
+  display: inline-block;
+  padding: 12px 20px;
+  border: 2px solid #755747;
+  border-radius: 999px;
+  color: #fff;
+  background: #ef8f85;
+  box-shadow: 0 4px 0 rgba(117, 87, 71, .25);
+  text-decoration: none;
+}
+.button.secondary { color: #604b3e; background: #fff; }
+.button:focus-visible { outline: 4px solid #f2c35e; outline-offset: 3px; }
+
+@media (max-width: 480px) {
+  body { padding: 14px; align-items: start; }
+  .card { padding: 26px 22px; border-radius: 26px; }
+}

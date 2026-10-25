@@ -39,3 +39,13 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Local design explorations and redundant source exports. The selected production
+# assets remain tracked separately.
+/assets/app-store/icon-options/
+/assets/app-store/*-source.png
+/assets/app-store/snail-house-ios-icon-1024.png
+/assets/ui/settings-shell-clean.png
+/assets/ui/settings-shell-muted.png
+/assets/ui/settings-shell.png
+/app-store/ICON_OPTIONS.md

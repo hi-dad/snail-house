@@ -4,10 +4,12 @@
     "slug": "snail-house",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/app-store/snail-house-ios-icon-final.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.danielryan.snailhouse",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -16,17 +18,33 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-font",
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
+        }
+      ],
       "expo-notifications",
       "expo-asset"
     ],
-    "backgroundColor": "#FBF4E8"
+    "backgroundColor": "#FBF4E8",
+    "extra": {
+      "eas": {
+        "projectId": "60036db1-e3f4-4732-8f62-269c73c9b40d"
+      }
+    }
   }
 }

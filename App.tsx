@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { gameNow, getClock, setClock } from './src/clock';
 import { GameState, advance, newRun, normalize, survivedMs } from './src/game/simulation';
 import { ensureNotificationPermission, rescheduleWarnings } from './src/notifications';
+import { setSoundEnabled } from './src/sound';
 import { EMPTY_SAVE, SaveData, loadSave, writeSave } from './src/storage';
 import { DeathScreen } from './src/ui/DeathScreen';
 import { GameScreen } from './src/ui/GameScreen';
@@ -34,6 +35,7 @@ export default function App() {
   useEffect(() => {
     loadSave().then((loaded) => {
       setClock(loaded.clock);
+      setSoundEnabled(loaded.soundEnabled);
       let next = loaded;
       if (loaded.game) {
         loaded.game = normalize(loaded.game);
@@ -53,16 +55,22 @@ export default function App() {
     if (opts?.moved || !game.alive) rescheduleWarnings(game);
   }, []);
 
+  const onAppearanceChange = useCallback((characterId: string, colorId: string) => {
+    setSave((s) => {
+      if (!s?.game) return s;
+      return { ...s, characterId, colorId, game: { ...s.game, characterId, colorId } };
+    });
+  }, []);
+
+  const onSoundEnabledChange = useCallback((enabled: boolean) => {
+    setSoundEnabled(enabled);
+    setSave((s) => (s ? { ...s, soundEnabled: enabled } : s));
+  }, []);
+
   const startRun = useCallback((colorId: string, characterId?: string) => {
     const game = newRun(gameNow(), colorId, characterId);
     setSave((s) => ({ ...(s ?? EMPTY_SAVE), onboarded: true, colorId, characterId: game.characterId ?? null, game }));
     ensureNotificationPermission().then(() => rescheduleWarnings(game));
-  }, []);
-
-  const resetAll = useCallback(() => {
-    setClock(null);
-    setSave(EMPTY_SAVE);
-    rescheduleWarnings(null);
   }, []);
 
   let screen: React.ReactNode = null;
@@ -85,8 +93,9 @@ export default function App() {
         <GameScreen
           game={game}
           onGame={onGame}
-          onNewRun={() => startRun(game.colorId, game.characterId)}
-          onResetAll={resetAll}
+          onAppearanceChange={onAppearanceChange}
+          soundEnabled={save.soundEnabled}
+          onSoundEnabledChange={onSoundEnabledChange}
         />
         {!game.alive && (
           <DeathScreen

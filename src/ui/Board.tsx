@@ -7,7 +7,7 @@ import Svg, { Circle, Path, Polyline } from 'react-native-svg';
 
 import { gameNow } from '../clock';
 import { PLAYER_TILES_PER_SECOND, SNAIL_STEP_MS } from '../game/constants';
-import { Tile, tileOf, xOf, yOf } from '../game/map';
+import { MAP_H, MAP_W, Tile, isWalkable, tileOf, wallBetween, xOf, yOf } from '../game/map';
 import { shortestPath } from '../game/pathfinding';
 import { GameState, movePlayer, snailHeading } from '../game/simulation';
 import { playBlocked } from '../sound';
@@ -18,12 +18,41 @@ import { HouseMap } from './HouseMap';
 import { FONT, blobColor } from './theme';
 
 const STEP_MS = 1000 / PLAYER_TILES_PER_SECOND;
+// The simulation keeps the snail on its last completed tile until the next real step. The
+// sprite only leans partway toward the likely next tile so a player move can't make it whip
+// nearly two tiles in the opposite direction when its route changes.
+const SNAIL_VISUAL_LEAD = 0.32;
 // Movement is how the game shows what's happening (where you walked, where the snail is),
 // so it always animates, even with the phone's Reduce Motion setting on. Purely ambient
 // motion (breathing, wiggling, bobbing) still respects that setting.
 const NEVER = ReduceMotion.Never;
 const always = { reduceMotion: NEVER };
 const linear = { easing: Easing.linear, ...always };
+
+/** True while a straight ghost flight is inside furniture or crossing a closed wall. */
+function ghostInsideObstacle(x: number, y: number): boolean {
+  const cellX = Math.max(0, Math.min(MAP_W - 1, Math.round(x)));
+  const cellY = Math.max(0, Math.min(MAP_H - 1, Math.round(y)));
+  if (!isWalkable(tileOf(cellX, cellY))) return true;
+
+  // Player coordinates are tile-centre indices, so walls sit at half values (3.5, 7.5…).
+  const wallBand = 0.16;
+  const worldX = x + 0.5;
+  const verticalBoundary = Math.round(worldX);
+  if (
+    verticalBoundary > 0 && verticalBoundary < MAP_W &&
+    Math.abs(worldX - verticalBoundary) < wallBand &&
+    wallBetween(verticalBoundary - 1, cellY, 1, 0)
+  ) return true;
+
+  const worldY = y + 0.5;
+  const horizontalBoundary = Math.round(worldY);
+  return (
+    horizontalBoundary > 0 && horizontalBoundary < MAP_H &&
+    Math.abs(worldY - horizontalBoundary) < wallBand &&
+    wallBetween(cellX, horizontalBoundary - 1, 0, 1)
+  );
+}
 
 interface Props {
   width: number;
@@ -46,11 +75,13 @@ export function Board({ width, game, now, onMove }: Props) {
   const shake = useSharedValue(0);
   const sx = useSharedValue(xOf(game.snailTile));
   const sy = useSharedValue(yOf(game.snailTile));
+  const lastSnailHeading = useRef(game.snailTile);
   const walk = useRef<{ tiles: Tile[]; t0: number }>({ tiles: [game.playerTile], t0: 0 });
   const wave = useSharedValue(0);
   const cheer = useSharedValue(0);
   const [excited, setExcited] = useState(false);
   const float = useSharedValue(0);
+  const ghostOpacity = useSharedValue(1);
   const isGhost = game.characterId === 'ghostie';
 
   useEffect(() => {
@@ -139,6 +170,61 @@ export function Board({ width, game, now, onMove }: Props) {
     ));
   }
 
+  /** Fly Ghostie along one geometric line, fading whenever that line crosses an obstacle. */
+  function animateGhostStraight(target: Tile) {
+    const fromX = px.get();
+    const fromY = py.get();
+    const toX = xOf(target);
+    const toY = yOf(target);
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const distance = Math.hypot(dx, dy);
+    const samples = Math.max(1, Math.ceil(distance * 8));
+    const duration = Math.max(STEP_MS, distance * STEP_MS);
+    const slice = duration / samples;
+    const points = Array.from({ length: samples }, (_, index) => {
+      const i = index + 1;
+      const x = fromX + (dx * i) / samples;
+      const y = fromY + (dy * i) / samples;
+      return { x, y, blocked: ghostInsideObstacle(x, y) };
+    });
+    const xs = [];
+    const ys = [];
+    const fades = [];
+    const fadeBeforeMs = 100;
+    const fadeAfterMs = 550;
+    for (let index = 0; index < points.length; index++) {
+      const { x, y, blocked } = points[index];
+      xs.push(withTiming(x, { duration: slice, ...linear }));
+      ys.push(withTiming(y, { duration: slice, ...linear }));
+      let opacity = blocked ? 0.18 : 1;
+      if (!blocked) {
+        const previous = points.slice(0, index).findLastIndex((point) => point.blocked);
+        if (previous >= 0) {
+          const elapsed = (index - previous) * slice;
+          if (elapsed < fadeAfterMs) opacity = Math.min(opacity, 0.18 + 0.82 * (elapsed / fadeAfterMs));
+        }
+        const next = points.slice(index + 1).findIndex((point) => point.blocked);
+        if (next >= 0) {
+          const until = (next + 1) * slice;
+          if (until < fadeBeforeMs) opacity = Math.min(opacity, 0.18 + 0.82 * (until / fadeBeforeMs));
+        }
+      }
+      fades.push(withTiming(opacity, { duration: slice, ...linear }));
+    }
+    px.set(withSequence(NEVER, ...xs));
+    py.set(withSequence(NEVER, ...ys));
+    // Even when the route ends immediately after an obstacle, always become fully solid
+    // again within half a second of stopping.
+    ghostOpacity.set(withSequence(
+      NEVER,
+      ...fades,
+      withTiming(1, { duration: 450, easing: Easing.out(Easing.quad), ...always }),
+    ));
+    walk.current = { tiles: [target], t0: 0 };
+    return { fromX, fromY, toX, toY, duration };
+  }
+
   // pageX/pageY minus the board's own position works the same on iOS, Android and web.
   const boardRef = useRef<View>(null);
   function onPress(e: GestureResponderEvent) {
@@ -163,10 +249,30 @@ export function Board({ width, game, now, onMove }: Props) {
       ));
       return;
     }
+    const token = result.collected ? game.tokenTile! : null;
+    if (isGhost) {
+      const flight = animateGhostStraight(target);
+      if (token !== null) {
+        const dx = flight.toX - flight.fromX;
+        const dy = flight.toY - flight.fromY;
+        const lengthSq = dx * dx + dy * dy;
+        const fraction = lengthSq === 0 ? 1 : Math.max(0, Math.min(1,
+          ((xOf(token) - flight.fromX) * dx + (yOf(token) - flight.fromY) * dy) / lengthSq,
+        ));
+        const pickupInMs = flight.duration * fraction;
+        const id = ++pickupSeq.current;
+        setPickup({ tile: token, delay: pickupInMs, id });
+        setTimeout(() => setPickup((p) => (p?.id === id ? null : p)), pickupInMs + 900);
+        setTimeout(celebrate, pickupInMs);
+        onMove(result.state, pickupInMs);
+      } else {
+        onMove(result.state);
+      }
+      return;
+    }
     // Walk from wherever the character is right now, still avoiding the snail (and
     // detouring over the strawberry if this move collects it).
     const snail = result.state.snailTile;
-    const token = result.collected ? game.tokenTile! : null;
     let from = visualNextTile();
     if (from.tile === snail) from = { tile: game.playerTile, remaining: 0 };
     const leg = (a: Tile, b: Tile) => (a === b ? [] : shortestPath(a, b, snail));
@@ -211,6 +317,7 @@ export function Board({ width, game, now, onMove }: Props) {
     return {
       width: size,
       height: size,
+      opacity: isGhost ? ghostOpacity.value : 1,
       zIndex: Math.round(py.value * 10) + 1,
       transform: [
         { translateX: (px.value * U - VIEW.x) * s + tilePx / 2 - size / 2 },
@@ -248,11 +355,14 @@ export function Board({ width, game, now, onMove }: Props) {
 
   useEffect(() => {
     const frac = Math.min(1, Math.max(0, (now - game.snailLastStepTime) / SNAIL_STEP_MS));
-    const tx = xOf(game.snailTile) + (xOf(heading) - xOf(game.snailTile)) * frac;
-    const ty = yOf(game.snailTile) + (yOf(heading) - yOf(game.snailTile)) * frac;
+    const visualProgress = frac * SNAIL_VISUAL_LEAD;
+    const tx = xOf(game.snailTile) + (xOf(heading) - xOf(game.snailTile)) * visualProgress;
+    const ty = yOf(game.snailTile) + (yOf(heading) - yOf(game.snailTile)) * visualProgress;
     const jump = Math.hypot(tx - sx.get(), ty - sy.get());
-    // Small moves glide continuously; turning around after the player moves takes a moment.
-    const duration = jump > 0.25 ? 900 : 300;
+    const changedDirection = lastSnailHeading.current !== heading;
+    lastSnailHeading.current = heading;
+    // Route changes ease slowly; ordinary timer updates remain almost imperceptible.
+    const duration = changedDirection ? 1400 : jump > 0.25 ? 1000 : 300;
     sx.set(withTiming(tx, { duration, ...linear }));
     sy.set(withTiming(ty, { duration, ...linear }));
   }, [now, game.snailTile, game.snailLastStepTime, heading, sx, sy]);

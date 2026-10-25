@@ -9,8 +9,14 @@ const sources = {
 
 type SoundName = keyof typeof sources;
 const players: Partial<Record<SoundName, AudioPlayer>> = {};
+let soundEnabled = true;
+
+export function setSoundEnabled(enabled: boolean) {
+  soundEnabled = enabled;
+}
 
 function play(name: SoundName) {
+  if (!soundEnabled) return;
   try {
     const player = (players[name] ??= createAudioPlayer(sources[name]));
     player.seekTo(0);
@@ -20,8 +26,8 @@ function play(name: SoundName) {
   }
 }
 
-/** The timer jumped up: happy little sound. */
-export function playSafe() {
+/** A successful move, whether it increases or decreases the safety timer. */
+export function playMove() {
   play('pop');
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 }

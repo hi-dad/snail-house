@@ -3,6 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import {
   DAY_MS, DIAMETER_ENDPOINTS, HOUR_MS, MAP_DIAMETER, MAX_LEAD_MS, SNAIL_STEP_MS, TOKEN_RESPAWN_MS,
+  WARNINGS,
 } from '../constants';
 import { DOORS, NEIGHBORS, WALKABLE_TILES, isWalkable, roomAt, tileOf, xOf, yOf } from '../map';
 import { bfs, eccentricity } from '../pathfinding';
@@ -15,6 +16,12 @@ const farRun = (now: number): GameState => ({
   ...newRun(now, 'peach'),
   playerTile: DIAMETER_ENDPOINTS.a,
   snailTile: DIAMETER_ENDPOINTS.b,
+});
+
+describe('notifications', () => {
+  it('has only the one-hour warning', () => {
+    expect(WARNINGS).toEqual([{ beforeMs: HOUR_MS, body: "It's RIGHT behind you." }]);
+  });
 });
 
 describe('map', () => {
@@ -179,5 +186,39 @@ describe('movePlayer()', () => {
     const s = newRun(T0, 'peach');
     expect(movePlayer(s, s.snailTile, T0)).toBeNull();
     expect(movePlayer(s, tileOf(0, 0), T0)).toBeNull(); // the bed
+  });
+
+  it('lets Ghostie fly straight through the dining table while other characters go around', () => {
+    const from = tileOf(4, 9);
+    const target = tileOf(7, 9);
+    const base = {
+      ...newRun(T0, 'peach'),
+      playerTile: from,
+      tokenTile: null,
+      tokenSpawnAt: Infinity,
+    };
+
+    const ghost = movePlayer({ ...base, characterId: 'ghostie' }, target, T0)!;
+    expect(ghost.state.playerTile).toBe(target);
+    expect(ghost.path).toContain(tileOf(5, 9));
+    expect(ghost.path).toContain(tileOf(6, 9));
+    expect(ghost.path.some((tile) => !isWalkable(tile))).toBe(true);
+
+    const blob = movePlayer({ ...base, characterId: 'blob' }, target, T0)!;
+    expect(blob.path.every(isWalkable)).toBe(true);
+    expect(blob.path).not.toContain(tileOf(5, 9));
+    expect(blob.path).not.toContain(tileOf(6, 9));
+  });
+
+  it('gives Ghostie a straight route through the closed bathroom wall', () => {
+    const s = {
+      ...newRun(T0, 'peach', 'ghostie'),
+      playerTile: tileOf(5, 2),
+      snailTile: tileOf(10, 6),
+      tokenTile: null,
+      tokenSpawnAt: Infinity,
+    };
+    const moved = movePlayer(s, tileOf(5, 5), T0)!;
+    expect(moved.path.map((tile) => xOf(tile))).toEqual([5, 5, 5]);
   });
 });

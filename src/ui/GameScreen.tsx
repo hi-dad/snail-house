@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming,
 } from 'react-native-reanimated';
@@ -8,12 +8,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { gameNow } from '../clock';
 import { HOUR_MS } from '../game/constants';
 import { GameState, advance, safetyMs, survivedMs } from '../game/simulation';
-import { playCollect, playSafe } from '../sound';
+import { playCollect, playMove } from '../sound';
 import { Board } from './Board';
 import { StrawberryArt } from './characters';
-import { DebugMenu } from './DebugMenu';
 import { formatSafety, formatStreak } from './format';
 import { ASPECT } from './geometry';
+import { SettingsMenu } from './SettingsMenu';
 import { C, FONT } from './theme';
 
 const TICK_MS = 250;
@@ -24,15 +24,22 @@ const COUNT_UP_MS = 900;
 interface Props {
   game: GameState;
   onGame: (next: GameState, opts?: { moved?: boolean }) => void;
-  onNewRun: () => void;
-  onResetAll: () => void;
+  onAppearanceChange: (characterId: string, colorId: string) => void;
+  soundEnabled: boolean;
+  onSoundEnabledChange: (enabled: boolean) => void;
 }
 
-export function GameScreen({ game, onGame, onNewRun, onResetAll }: Props) {
+export function GameScreen({
+  game,
+  onGame,
+  onAppearanceChange,
+  soundEnabled,
+  onSoundEnabledChange,
+}: Props) {
   const insets = useSafeAreaInsets();
   const [now, setNow] = useState(gameNow);
   const [area, setArea] = useState({ w: 0, h: 0 });
-  const [debugOpen, setDebugOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [boost, setBoost] = useState<{ amount: number; id: number } | null>(null);
   const [boostLeft, setBoostLeft] = useState(0);
 
@@ -71,8 +78,8 @@ export function GameScreen({ game, onGame, onNewRun, onResetAll }: Props) {
     if (after > before + 60 * 1000) {
       setBoost({ amount: after - before, id: Date.now() });
       setBoostLeft(after - before);
-      playSafe();
     }
+    playMove();
     setNow(t);
     onGame(next, { moved: true });
   }
@@ -116,13 +123,16 @@ export function GameScreen({ game, onGame, onNewRun, onResetAll }: Props) {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }]}>
+      <Pressable
+        accessibilityLabel="Open settings"
+        hitSlop={6}
+        onPress={() => setSettingsOpen(true)}
+        style={({ pressed }) => [styles.settingsButton, { top: insets.top + 4 }, pressed && styles.settingsPressed]}
+      >
+        <Image source={require('../../assets/ui/settings-shell-balanced.png')} resizeMode="contain" style={styles.settingsImage} />
+      </Pressable>
       <View style={styles.content} onLayout={onLayout}>
-        <Pressable
-          onLongPress={() => setDebugOpen(true)}
-          delayLongPress={1200}
-          style={styles.header}
-          onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}
-        >
+        <View style={styles.header} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
           <Animated.View style={[styles.pill, { backgroundColor: tone }, pulseStyle]}>
             <Text style={styles.safeLabel}>Safe for</Text>
             <Text style={styles.safeTime}>{formatSafety(shown)}</Text>
@@ -135,20 +145,22 @@ export function GameScreen({ game, onGame, onNewRun, onResetAll }: Props) {
               <Text style={styles.streak}>{game.tokens - pendingPickups}</Text>
             </Animated.View>
           </View>
-        </Pressable>
+        </View>
 
         <View style={styles.boardArea}>
           {boardWidth > 0 && headerH > 0 && <Board width={boardWidth} game={game} now={now} onMove={handleMove} />}
         </View>
       </View>
 
-      <DebugMenu
-        visible={debugOpen}
-        game={game}
-        onClose={() => setDebugOpen(false)}
-        onGame={(g) => onGame(g, { moved: true })}
-        onNewRun={onNewRun}
-        onResetAll={onResetAll}
+      <SettingsMenu
+        visible={settingsOpen}
+        characterId={game.characterId}
+        colorId={game.colorId}
+        soundEnabled={soundEnabled}
+        onClose={() => setSettingsOpen(false)}
+        onCharacterChange={(characterId) => onAppearanceChange(characterId, game.colorId)}
+        onColorChange={(colorId) => onAppearanceChange(game.characterId ?? 'blob', colorId)}
+        onSoundEnabledChange={onSoundEnabledChange}
       />
     </View>
   );
@@ -156,6 +168,17 @@ export function GameScreen({ game, onGame, onNewRun, onResetAll }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
+  settingsButton: {
+    position: 'absolute',
+    right: 8,
+    zIndex: 10,
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsPressed: { transform: [{ scale: 0.9 }] },
+  settingsImage: { width: 56, height: 56 },
   header: { alignItems: 'center', paddingHorizontal: 16, paddingBottom: 6 },
   pill: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import { SNAIL_STEP_MS, TOKEN_RESPAWN_MS } from './constants';
-import { START_PLAYER, START_SNAIL, Tile, WALKABLE_TILES, isWalkable } from './map';
+import { MAP_H, MAP_W, START_PLAYER, START_SNAIL, Tile, WALKABLE_TILES, isWalkable, tileOf, xOf, yOf } from './map';
 import { bfs, shortestPath, stepToward } from './pathfinding';
 
 const TRAIL_LENGTH = 5;
@@ -131,9 +131,34 @@ export function snailHeading(state: GameState): Tile {
 }
 
 /**
+ * Tiles touched by the straight line between two tile centres. Ghostie uses this instead
+ * of the house graph, so the returned route can pass through furniture and closed walls.
+ */
+export function straightLineTiles(from: Tile, to: Tile): Tile[] {
+  const x0 = xOf(from);
+  const y0 = yOf(from);
+  const dx = xOf(to) - x0;
+  const dy = yOf(to) - y0;
+  const samples = Math.max(1, Math.ceil(Math.hypot(dx, dy) * 8));
+  const route: Tile[] = [];
+  let last = from;
+  for (let i = 1; i <= samples; i++) {
+    const x = Math.round(x0 + (dx * i) / samples);
+    const y = Math.round(y0 + (dy * i) / samples);
+    if (x < 0 || x >= MAP_W || y < 0 || y >= MAP_H) continue;
+    const tile = tileOf(x, y);
+    if (last !== tile) {
+      route.push(tile);
+      last = tile;
+    }
+  }
+  return route;
+}
+
+/**
  * Move the player to `target` right now, picking up the strawberry if the path crosses it.
- * Returns the walked path, or null when the target can't be reached without passing
- * through the snail.
+ * Ghostie flies directly through walls and furniture; everyone else follows the walkable
+ * house graph and avoids the snail.
  */
 export function movePlayer(
   state: GameState,
@@ -141,8 +166,10 @@ export function movePlayer(
   now: number,
 ): { state: GameState; path: Tile[]; collected: boolean } | null {
   const current = advance(state, now);
-  if (!current.alive || !isWalkable(target)) return null;
-  const path = shortestPath(current.playerTile, target, current.snailTile);
+  if (!current.alive || !isWalkable(target) || target === current.snailTile) return null;
+  const path = current.characterId === 'ghostie'
+    ? straightLineTiles(current.playerTile, target)
+    : shortestPath(current.playerTile, target, current.snailTile);
   if (!path || path.length === 0) return null;
   const moved = { ...current, playerTile: target };
   const collected = current.tokenTile !== null && path.includes(current.tokenTile);

@@ -56,6 +56,12 @@ There are two scores: your **streak** (days survived) and **strawberries** colle
 - Strawberry spawns are seeded and handled inside `advance()`, so they stay deterministic
   offline too.
 
+## Ghostie
+
+Ghostie is the one character with a movement ability: it flies in a straight line to any
+walkable destination instead of following doors and hallways. While crossing a closed wall
+or blocking furniture, Ghostie fades translucent, then returns to normal on clear floor.
+
 The tests in `src/game/__tests__` check that:
 - there are no dead ends (removing any single tile, i.e. the snail, never cuts the house apart)
 - only the listed doorways exist, each 2 tiles wide
@@ -77,7 +83,7 @@ The tests in `src/game/__tests__` check that:
 
 ## Notes
 
-- Notifications are rescheduled after every move, at 12h, 3h, and 1h before the catch.
+- One notification is rescheduled after every move, 1h before the catch.
   Local notifications work in Expo Go.
 - `react-dom` / `react-native-web` are installed only for quick previews in a browser (`npx expo start --web`).
 - The game trusts the device clock. Setting the clock back would buy extra time.

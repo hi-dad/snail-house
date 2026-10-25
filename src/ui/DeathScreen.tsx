@@ -37,9 +37,7 @@ export function DeathScreen({ game, bestMs, bestTokens, onTryAgain, onChangeChar
         <View style={styles.card}>
           <Text style={styles.rip}>R.I.P.</Text>
           <Text style={styles.hereLies}>Here lies</Text>
-          <Text style={styles.name}>
-            {color.name} {characterDef(game.characterId).name}
-          </Text>
+          <Text style={styles.name}>{characterDef(game.characterId).name}</Text>
           <View style={styles.divider} />
           <Text style={styles.survived}>Survived</Text>
           <Text style={styles.time}>{formatSurvived(survived)}</Text>
@@ -70,7 +68,6 @@ export function DeathScreen({ game, bestMs, bestTokens, onTryAgain, onChangeChar
 
 function Hug({ colorBody, kind }: { colorBody: ReturnType<typeof blobColor>; kind?: string }) {
   const squeeze = useSharedValue(0);
-  const heart = useSharedValue(0);
   useEffect(() => {
     squeeze.set(withDelay(
       900,
@@ -79,21 +76,14 @@ function Hug({ colorBody, kind }: { colorBody: ReturnType<typeof blobColor>; kin
         -1,
       ),
     ));
-    heart.set(withRepeat(withTiming(1, { duration: 1800, easing: Easing.out(Easing.quad) }), -1));
-  }, [squeeze, heart]);
+  }, [squeeze]);
 
   const blobStyle = useAnimatedStyle(() => ({
     transform: [{ scaleX: 1 - squeeze.value * 0.1 }, { scaleY: 1 + squeeze.value * 0.06 }],
   }));
   const snailStyle = useAnimatedStyle(() => ({ transform: [{ translateX: -squeeze.value * 6 }, { scaleX: -1 }] }));
-  const heartStyle = useAnimatedStyle(() => ({
-    opacity: 1 - heart.value,
-    transform: [{ translateY: -heart.value * 50 }, { scale: 0.7 + heart.value * 0.6 }],
-  }));
-
   return (
     <View style={styles.hug}>
-      <Animated.Text style={[styles.heart, heartStyle]}>💕</Animated.Text>
       <Animated.View style={blobStyle}>
         <CharacterArt kind={kind} color={colorBody} size={96} mood="hugged" />
       </Animated.View>
@@ -114,7 +104,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   hug: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', height: 130 },
-  heart: { position: 'absolute', top: 0, left: '42%', fontSize: 28 },
   cardWrap: { alignItems: 'center', paddingHorizontal: 12, paddingTop: 12, backgroundColor: C.paper },
   card: {
     width: 250,

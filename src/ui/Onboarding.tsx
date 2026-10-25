@@ -104,9 +104,7 @@ export function CharacterPicker({ initialCharacterId, initialColorId, onPick }: 
       <Text style={styles.title}>{picking ? 'Who are you?' : 'Pick a color'}</Text>
       <Animated.View style={[styles.center, wiggleStyle]}>
         <CharacterArt kind={kind} color={color} size={170} />
-        <Text style={styles.name}>
-          {picking ? characterDef(kind).name : `${color.name} ${characterDef(kind).name}`}
-        </Text>
+        <Text style={styles.name}>{characterDef(kind).name}</Text>
       </Animated.View>
       <View style={styles.grid}>
         {options.map((o) => (
