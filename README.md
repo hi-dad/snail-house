@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://apps.apple.com/us/app/snail-house/id6826937107">
-    <img src="assets/app-store/snail-house-ios-icon-final.png" width="160" alt="Snail House app icon">
+    <img src="assets/readme/snail-house-icon-rounded.png" width="160" alt="Snail House app icon">
   </a>
 </p>
 
@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <strong><a href="https://apps.apple.com/us/app/snail-house/id6826937107">Download Snail House on the App Store</a></strong>
+  <strong><a href="https://apps.apple.com/us/app/snail-house/id6826937107">Download on IOS store</a></strong>
   &nbsp;·&nbsp;
   <a href="https://hi-dad.github.io/snail-house-support/support.html">Support</a>
   &nbsp;·&nbsp;
