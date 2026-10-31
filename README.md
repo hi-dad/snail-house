@@ -7,7 +7,7 @@
 <h1 align="center">Snail House</h1>
 
 <p align="center">
-  A slow-burn survival game about staying one step ahead of a very patient snail.
+  A slow-burn survival game about staying one step ahead of a very persistent snail.
 </p>
 
 <p align="center">
